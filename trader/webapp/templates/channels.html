@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Каналы · TG Trader{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div><p class="eyebrow">Источники сигналов</p><h1>Каналы</h1><p class="lead">Лимиты банка и правило размера входа для каждого источника.</p></div>
+  <span class="mode-pill"><span>Подключено</span><strong>{{ channels|length }}</strong></span>
+</section>
+{% if saved %}<div class="notice success">Настройки канала сохранены и записаны в аудит.</div>{% endif %}
+{% if queued %}<div class="notice success">Команда принята. Reader проверит доступ к каналу и применит её.</div>{% endif %}
+{% if error %}<div class="notice error">{{ error }}</div>{% endif %}
+<article class="panel add-channel">
+  <div><p class="eyebrow">Новый источник</p><h2>Подключить канал</h2><p>Аккаунт reader уже должен быть подписан на канал. Укажите его внутренний Telegram ID.</p></div>
+  <form method="post" action="/channel-actions/add">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="idempotency_key" value="{{ add_token }}">
+    <label><span>Telegram ID</span><input required name="telegram_id" inputmode="numeric" placeholder="-1001234567890"></label>
+    <button type="submit">Проверить и добавить</button>
+  </form>
+</article>
+<div class="channel-grid">
+{% for channel in channels %}
+  <article class="panel channel-card">
+    <div class="panel-head">
+      <div><p class="eyebrow">Telegram channel</p><h2>{{ channel.title }}</h2><span class="mono">{{ channel.telegram_id }}</span></div>
+      <div class="channel-state">
+        <span class="tag {{ 'good' if channel.connection_status == 'ready' else ('bad' if channel.connection_status == 'error' else 'muted') }}">{{ {'ready':'подключён','error':'ошибка','disabled':'выключен','unknown':'проверяется'}.get(channel.connection_status, 'проверяется') }}</span>
+        <form method="post" action="/channels/{{ channel.id }}/monitoring">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="idempotency_key" value="{{ channel.command_token }}">
+          <input type="hidden" name="enabled" value="{{ '0' if channel.enabled else '1' }}">
+          <button class="button ghost small" type="submit">{{ 'Отключить' if channel.enabled else 'Включить' }}</button>
+        </form>
+      </div>
+    </div>
+    {% if channel.last_error %}<div class="inline-error">{{ channel.last_error }}</div>{% endif %}
+    <div class="channel-facts">
+      <div><span>Постов</span><strong>{{ channel.event_count }}</strong></div>
+      <div><span>Успешно</span><strong>{{ channel.done_count }}</strong></div>
+      <div><span>Ошибки</span><strong>{{ channel.failed_count }}</strong></div>
+      <div><span>Последний</span><strong>{{ channel.last_event_at|datetime }}</strong></div>
+    </div>
+    <form class="settings-form" method="post" action="/channels/{{ channel.id }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="version" value="{{ channel.settings_version }}">
+      <label><span>Выделенный банк, USDT</span><input name="bank_limit_usdt" inputmode="decimal" placeholder="Например, 100" value="{{ channel.bank_limit_usdt or '' }}"></label>
+      <label><span>Расчёт размера входа</span>
+        <select name="sizing_mode">
+          <option value="percent" {{ 'selected' if channel.sizing_mode == 'percent' else '' }}>Процент от исходного банка</option>
+          <option value="fixed_usdt" {{ 'selected' if channel.sizing_mode == 'fixed_usdt' else '' }}>Фиксированная сумма USDT</option>
+        </select>
+      </label>
+      <label><span>Размер входа</span><input required name="sizing_value" inputmode="decimal" value="{{ channel.sizing_value }}"></label>
+      <div class="form-foot"><small>Сейчас настройка только сохраняется. Торговое исполнение не включено.</small><button type="submit">Сохранить</button></div>
+    </form>
+  </article>
+{% else %}
+  <div class="panel empty-state"><strong>Каналов пока нет</strong><p>Reader зарегистрирует канал после получения конфигурации.</p></div>
+{% endfor %}
+</div>
+{% endblock %}

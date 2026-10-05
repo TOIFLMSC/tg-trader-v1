@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Посты · TG Trader{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div><p class="eyebrow">Recognition feed</p><h1>Посты</h1><p class="lead">Оригинальные сообщения и структурированные результаты распознавания.</p></div>
+  <span class="mode-pill"><span>Найдено</span><strong>{{ result.total }}</strong></span>
+</section>
+<form class="filter-bar" method="get" action="/posts">
+  <label><span>Канал</span><select name="channel"><option value="">Все</option>{% for item in channels %}<option value="{{ item.id }}" {{ 'selected' if filters.channel == item.id else '' }}>{{ item.title }}</option>{% endfor %}</select></label>
+  <label><span>Статус</span><select name="status"><option value="">Все</option><option value="done" {{ 'selected' if filters.status == 'done' else '' }}>Успешно</option><option value="failed" {{ 'selected' if filters.status == 'failed' else '' }}>Ошибка</option><option value="pending" {{ 'selected' if filters.status == 'pending' else '' }}>В очереди</option></select></label>
+  <label><span>Действие</span><select name="action"><option value="">Все</option>{% for value,label in [('open','Вход'),('close_partial','Частичное закрытие'),('close_full','Полное закрытие'),('set_stop','Стоп'),('set_take_profit','Тейк'),('report','Отчёт'),('unknown','Неизвестно')] %}<option value="{{ value }}" {{ 'selected' if filters.action == value else '' }}>{{ label }}</option>{% endfor %}</select></label>
+  <label><span>Тикер</span><input name="symbol" value="{{ filters.symbol }}" placeholder="AVAUSDT"></label>
+  <button type="submit">Применить</button><a class="button ghost" href="/posts">Сбросить</a>
+</form>
+<div class="live-update-status" data-live-status-for="posts-list" role="status"><span class="live-dot"></span><span>Автообновление каждые 5 с</span></div>
+<div id="posts-list" data-live-region hx-get="{{ partial_url }}" hx-trigger="every 5s" hx-swap="innerHTML">
+  {% include "partials/posts_list.html" %}
+</div>
+{% endblock %}

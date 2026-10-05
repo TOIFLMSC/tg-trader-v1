@@ -1,0 +1,51 @@
+<section class="metric-grid" aria-label="Основные показатели">
+  <article class="metric accent"><span>Распознано</span><strong>{{ data.counts.get('done', 0) }}</strong><small>успешных событий</small></article>
+  <article class="metric"><span>Ошибки</span><strong>{{ data.counts.get('failed', 0) }}</strong><small>сохранены для разбора</small></article>
+  <article class="metric"><span>В очереди</span><strong>{{ data.counts.get('pending', 0) }}</strong><small>ожидают LLM</small></article>
+  <article class="metric"><span>LLM за месяц</span><strong>${{ '%.4f'|format(data.spent) }}</strong><small>локальная оценка</small></article>
+</section>
+<section class="two-columns">
+  <article class="panel">
+    <div class="panel-head"><div><p class="eyebrow">Процессы</p><h2>Сервисы</h2></div><span class="schema">schema v{{ data.schema_version }}</span></div>
+    <div class="service-list">
+      {% for service in data.services %}
+      <div class="service-row">
+        <span class="status-dot {{ 'online' if service.online else 'offline' }}"></span>
+        <div><strong>{{ service.service_name }}</strong><small>PID {{ service.pid }}</small></div>
+        <div class="service-state"><strong>{{ 'online' if service.online else 'offline' }}</strong><small>heartbeat {{ service.age_seconds if service.age_seconds is not none else '—' }} сек. назад</small></div>
+      </div>
+      {% else %}<div class="empty">Heartbeat ещё не зарегистрирован.</div>{% endfor %}
+    </div>
+  </article>
+  <article class="panel">
+    <div class="panel-head"><div><p class="eyebrow">Исполнение</p><h2>Доступные режимы</h2></div></div>
+    <div class="mode-list">
+      {% set execution = data.settings.get('execution_mode', 'recognition') %}
+      <div class="mode-card {{ 'selected' if execution == 'recognition' else '' }}"><span>01</span><div><strong>Recognition</strong><small>Чтение и распознавание</small></div><b>{{ ('PAUSED' if data.settings.get('recognition_paused') == 'true' else 'ACTIVE') if execution == 'recognition' else 'READY' }}</b></div>
+      <div class="mode-card {{ 'selected' if execution == 'paper' else '' }}"><span>02</span><div><strong>Paper</strong><small>Виртуальные заявки и позиции на публичных ценах MEXC</small></div><b>{{ 'ACTIVE' if execution == 'paper' else 'READY' }}</b></div>
+      {% set armed = data.settings.get('live_armed') == 'true' %}
+      <div class="mode-card {{ 'selected' if execution == 'live' and armed else ('locked' if not armed else '') }}"><span>03</span><div><strong>Live</strong><small>Приватный MEXC API · isolated · ручные подтверждения</small></div><b>{{ 'ACTIVE · ARMED' if execution == 'live' and armed else ('DISARMED' if not armed else 'ARMED') }}</b></div>
+    </div>
+    <a class="text-link control-link" href="/control">Открыть управление →</a>
+  </article>
+</section>
+<section class="panel channels-panel">
+  <div class="panel-head"><div><p class="eyebrow">Источники</p><h2>Каналы</h2></div><a class="text-link" href="/channels">Настроить →</a></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Канал</th><th>Мониторинг</th><th>События</th><th>Банк</th><th>Размер входа</th><th>Последняя активность</th></tr></thead>
+    <tbody>{% for channel in data.channels %}<tr>
+      <td><strong>{{ channel.title }}</strong><small>{{ channel.telegram_id }}</small></td>
+      <td><span class="tag {{ 'good' if channel.enabled else 'muted' }}">{{ 'включён' if channel.enabled else 'выключен' }}</span></td>
+      <td>{{ channel.event_count }}</td>
+      <td>{{ (channel.bank_limit_usdt ~ ' USDT') if channel.bank_limit_usdt else 'не задан' }}</td>
+      <td>{{ channel.sizing_value }}{{ '%' if channel.sizing_mode == 'percent' else ' USDT' }}</td>
+      <td>{{ channel.last_event_at|datetime }}</td>
+    </tr>{% else %}<tr><td colspan="6" class="empty">Каналы пока не зарегистрированы.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+<footer class="page-footer">
+  <span>Approval: <strong>{{ data.settings.get('approval_mode', 'manual') }}</strong></span>
+  <span>Планы: <strong>{{ data.plan_counts.values()|sum }}</strong></span>
+  {% if data.last_event %}<span>Последнее событие: <strong>#{{ data.last_event.id }} · пост #{{ data.last_event.message }}</strong></span>{% endif %}
+  <span>Обновлено автоматически</span>
+</footer>

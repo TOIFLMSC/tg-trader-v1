@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Управление · TG Trader{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div><p class="eyebrow">Safe control</p><h1>Управление</h1><p class="lead">Команды применяет reader; каждое действие сохраняется в журнале.</p></div>
+  <span class="mode-pill"><span>Исполнение</span><strong>{{ control.settings.get('execution_mode', {}).get('value', 'recognition') }}</strong></span>
+</section>
+{% if queued %}<div class="notice success">Команда поставлена в очередь и обычно применяется за несколько секунд.</div>{% endif %}
+<div class="live-update-status" data-live-status-for="control-live" role="status"><span class="live-dot"></span><span>Автообновление каждые 3 с</span></div>
+<div id="control-live" data-live-region hx-get="/partials/control" hx-trigger="every 3s" hx-swap="innerHTML">
+  {% include "partials/control_live.html" %}
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Пост #{{ event.message }} · TG Trader{% endblock %}
+{% block content %}
+<a class="back-link" href="/posts">← Ко всем постам</a>
+<section class="page-head detail-head">
+  <div><p class="eyebrow">{{ event.channel_title }}</p><h1>Пост #{{ event.message }}</h1><p class="lead">Событие #{{ event.id }} · {{ event.display_date }}</p></div>
+  <span class="tag large {{ 'good' if event.status == 'done' else ('bad' if event.status == 'failed' else 'muted') }}">{{ event.status }}</span>
+</section>
+<section class="detail-grid">
+  <div class="detail-stack">
+    <article class="panel"><div class="panel-head"><div><p class="eyebrow">Источник</p><h2>Оригинальный пост</h2></div>{% if event.telegram_url %}<a class="text-link" href="{{ event.telegram_url }}" target="_blank" rel="noreferrer">Открыть в Telegram ↗</a>{% endif %}</div><div class="original-text">{{ event.text or 'Текст отсутствует.' }}</div>{% if event.main.reply_to %}<p class="reply-note">Reply на пост #{{ event.main.reply_to }}</p>{% endif %}</article>
+    {% if event.media %}<article class="panel"><div class="panel-head"><div><p class="eyebrow">Media</p><h2>Изображения</h2></div><span class="schema">{{ event.media|length }}</span></div><div class="media-grid">{% for media in event.media %}<a href="/media/{{ event.id }}/{{ loop.index0 }}" target="_blank"><img src="/media/{{ event.id }}/{{ loop.index0 }}" alt="Медиа {{ loop.index }} поста #{{ event.message }}"></a>{% endfor %}</div></article>{% endif %}
+    {% if event.parents %}<article class="panel"><div class="panel-head"><div><p class="eyebrow">Context</p><h2>Цепочка Reply</h2></div></div>{% for parent in event.parents %}<div class="parent-message"><strong>Пост #{{ parent.id }}</strong><p>{{ parent.text or 'Без текста' }}</p></div>{% endfor %}</article>{% endif %}
+  </div>
+  <div class="detail-stack">
+    <article class="panel analysis-panel"><div class="panel-head"><div><p class="eyebrow">LLM result</p><h2>Результат распознавания</h2></div></div>
+      {% if event.summary %}<p class="analysis-summary">{{ event.summary }}</p>{% endif %}
+      {% if event.error %}<div class="notice error">{{ event.error }}</div>{% endif %}
+      {% for signal in event.signals %}<div class="signal-card">
+        <div class="signal-title"><span class="chip">{{ signal.action }}</span><strong>{{ signal.symbol or 'Тикер не определён' }}</strong><span>{{ (signal.side or '—')|upper }}</span></div>
+        <dl>
+          <div><dt>Вход</dt><dd>{{ signal.entry_kind }}{% if signal.entry_prices %} · {{ signal.entry_prices|join(', ') }}{% endif %}</dd></div>
+          <div><dt>Плечо</dt><dd>{{ signal.leverage_min or '—' }}{% if signal.leverage_max and signal.leverage_max != signal.leverage_min %}–{{ signal.leverage_max }}{% endif %}</dd></div>
+          <div><dt>Стоп</dt><dd>{{ signal.stop_price or '—' }}</dd></div>
+          <div><dt>Тейки</dt><dd>{{ signal.take_profits|join(', ') if signal.take_profits else '—' }}</dd></div>
+          <div><dt>Закрытие</dt><dd>{{ (signal.close_percent ~ '%') if signal.close_percent else '—' }}</dd></div>
+          <div><dt>Связь</dt><dd>{{ ('пост #' ~ signal.related_message_id) if signal.related_message_id else '—' }}</dd></div>
+        </dl>
+        <p class="evidence">{{ signal.evidence }}</p>
+        {% for question in signal.questions %}<div class="question">Уточнить: {{ question }}</div>{% endfor %}
+      </div>{% else %}{% if not event.error %}<div class="empty">Торговых действий не распознано.</div>{% endif %}{% endfor %}
+    </article>
+    {% if event.trade_plans %}<article class="panel"><div class="panel-head"><div><p class="eyebrow">Deterministic planner</p><h2>Торговые планы</h2></div><a class="text-link" href="/trades">Все планы →</a></div>
+      {% for plan in event.trade_plans %}<div class="signal-card plan-card">
+        <div class="signal-title"><span class="chip">#{{ plan.id }} · rev {{ plan.revision }}</span><strong>{{ plan.symbol or 'Тикер не определён' }}</strong><span>{{ plan.status_label }}</span></div>
+        <dl><div><dt>Действие</dt><dd>{{ plan.action }}</dd></div><div><dt>Среда</dt><dd>{{ plan.environment }}</dd></div><div><dt>Ордер</dt><dd>{{ plan.order_kind }}{% if plan.trigger_price %} · {{ plan.trigger_price }}{% endif %}</dd></div><div><dt>Маржа</dt><dd>{{ (plan.margin_usdt ~ ' USDT') if plan.margin_usdt else '—' }}</dd></div><div><dt>Плечо</dt><dd>{{ (plan.effective_leverage ~ '× isolated') if plan.effective_leverage else '—' }}</dd></div><div><dt>Причина</dt><dd>{{ plan.reason_text or '—' }}</dd></div></dl>
+        {% for question in plan.questions %}<div class="question">Уточнить: {{ question }}</div>{% endfor %}
+        {% for approval in plan.approvals %}<div class="approval-note">{{ approval.decision }} · версия {{ approval.plan_version }} · {{ approval.actor }}</div>{% endfor %}
+      </div>{% endfor %}
+    </article>{% endif %}
+    {% if event.revisions %}<article class="panel"><div class="panel-head"><div><p class="eyebrow">History</p><h2>Предыдущие версии</h2></div><span class="schema">{{ event.revisions|length }}</span></div>{% for revision in event.revisions %}<details><summary>{{ revision.created_at|datetime }} · {{ revision.reason }}</summary><pre>{{ revision.old_analysis_data|tojson(indent=2) }}</pre></details>{% endfor %}</article>{% endif %}
+  </div>
+</section>
+{% endblock %}

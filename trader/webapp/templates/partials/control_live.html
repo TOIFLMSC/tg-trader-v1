@@ -1,0 +1,71 @@
+<section class="control-grid">
+  <article class="panel control-card">
+    <div class="panel-head"><div><p class="eyebrow">Recognition</p><h2>Чтение и распознавание</h2></div><span class="tag {{ 'good' if control.reader_online else 'bad' }}">{{ 'reader online' if control.reader_online else 'reader offline' }}</span></div>
+    <div class="control-state"><span>Состояние</span><strong>{{ 'На паузе' if control.paused else 'Работает' }}</strong></div>
+    <p>Пауза останавливает новые LLM-разборы. Reader продолжает сохранять посты, а текущий запрос может завершиться.</p>
+    <form method="post" action="/control/recognition">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="idempotency_key" value="{{ recognition_token }}">
+      <input type="hidden" name="action" value="{{ 'resume' if control.paused else 'pause' }}">
+      <button type="submit" {{ 'disabled' if not control.reader_online else '' }}>{{ 'Продолжить распознавание' if control.paused else 'Приостановить распознавание' }}</button>
+    </form>
+  </article>
+  <article class="panel control-card">
+    <div class="panel-head"><div><p class="eyebrow">Approvals</p><h2>Политика подтверждений</h2></div></div>
+    {% set approval = control.settings.get('approval_mode', {}).get('value', 'manual') %}
+    <div class="choice-grid">
+      {% for value,label,text in [('manual','Ручной','Каждое торговое действие требует подтверждения.'),('auto','Автоматический','Полные свежие paper-планы исполняются после проверок; уточнения остаются ручными.')] %}
+      <form class="choice-card {{ 'selected' if approval == value else '' }}" method="post" action="/control/approval">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="idempotency_key" value="{{ approval_token }}"><input type="hidden" name="mode" value="{{ value }}">
+        <strong>{{ label }}</strong><small>{{ text }}</small><button class="button ghost small" type="submit" {{ 'disabled' if approval == value else '' }}>{{ 'Выбрано' if approval == value else 'Выбрать' }}</button>
+      </form>
+      {% endfor %}
+    </div>
+  </article>
+</section>
+<section class="panel readiness-panel">
+  <div class="panel-head"><div><p class="eyebrow">Execution readiness</p><h2>Режимы исполнения</h2></div></div>
+  {% set execution = control.settings.get('execution_mode', {}).get('value', 'recognition') %}
+  <div class="readiness-grid">
+    <form class="readiness {{ 'ready' if execution == 'recognition' else '' }}" method="post" action="/control/execution"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="idempotency_key" value="{{ execution_token }}"><input type="hidden" name="mode" value="recognition"><span>01</span><div><strong>Recognition</strong><small>Чтение, LLM и планы без виртуального исполнения</small></div><button class="button ghost small" {{ 'disabled' if execution == 'recognition' else '' }}>{{ 'ACTIVE' if execution == 'recognition' else 'Включить' }}</button></form>
+    <form class="readiness {{ 'ready' if execution == 'paper' else '' }}" method="post" action="/control/execution"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="idempotency_key" value="{{ execution_token }}-paper"><input type="hidden" name="mode" value="paper"><span>02</span><div><strong>Paper</strong><small>Виртуальные ордера на публичных ценах MEXC</small></div><button class="button ghost small" {{ 'disabled' if execution == 'paper' else '' }}>{{ 'ACTIVE' if execution == 'paper' else 'Включить' }}</button></form>
+    {% set armed = control.settings.get('live_armed', {}).get('value', 'false') == 'true' %}
+    {% set snap = control.live_snapshot %}
+    <div class="readiness {{ 'ready' if execution == 'live' and armed else ('locked' if not armed else '') }}">
+      <span>03</span><div><strong>Live</strong><small>Приватный MEXC API · только isolated · отдельная защёлка</small></div>
+      <b>{{ 'ACTIVE · ARMED' if execution == 'live' and armed else ('DISARMED' if not armed else 'ARMED') }}</b>
+    </div>
+  </div>
+</section>
+{% if execution == 'live' and not armed %}<div class="notice error">Режим Live выбран, но защёлка снята: реальные заявки заблокированы. Выполните новую проверку MEXC, активируйте защёлку и заново подтвердите план.</div>{% endif %}
+<section class="panel live-protection-panel">
+  <div class="panel-head"><div><p class="eyebrow">MEXC private readiness</p><h2>Защита Live</h2></div><span class="tag {{ 'good' if armed else 'bad' }}">{{ 'ARMED' if armed else 'DISARMED' }}</span></div>
+  <div class="control-state live-latch-state"><span>Торговая защёлка</span><strong>{{ 'Активна — реальные заявки разрешены' if armed else 'Снята — реальные заявки заблокированы' }}</strong></div>
+  <div class="live-protection-details">
+  {% if snap %}
+  <p><strong>Проверка #{{ snap.id }}</strong> · {{ snap.checked_at|datetime }} · {{ snap.reason }} · {{ 'действует' if control.live_snapshot_fresh else 'устарела' }}</p>
+  <p>Доступно: {{ snap.usdt_available or '—' }} USDT · режим позиций: {{ snap.position_mode or '—' }} · открытых позиций: {{ snap.positions|length }} · заявок: {{ snap.orders|length }}</p>
+  {% else %}<p>Приватный API ещё не проверялся. Проверка только читает баланс, позиции, заявки и режим позиции.</p>{% endif %}
+  {% if not armed and control.live_disarm_reason %}<p class="live-disarm-reason"><strong>Почему снята:</strong> {{ control.live_disarm_reason }}</p>{% endif %}
+  </div>
+  <div class="inline-actions">
+    <form method="post" action="/control/live/check"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="idempotency_key" value="{{ live_check_token }}"><button class="button ghost" type="submit" {{ 'disabled' if not control.reader_online else '' }}>Проверить MEXC</button></form>
+    {% if armed %}
+    {% if execution != 'live' %}<form method="post" action="/control/execution"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="idempotency_key" value="{{ execution_token }}-live"><input type="hidden" name="mode" value="live"><button type="submit">Включить Live</button></form>{% endif %}
+    <form method="post" action="/control/live/disarm"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="idempotency_key" value="{{ live_disarm_token }}"><button class="button danger" type="submit">Снять защёлку Live</button></form>
+    {% elif snap and control.live_snapshot_fresh %}
+    <form method="post" action="/control/live/activate">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="idempotency_key" value="{{ live_activate_token }}">
+      <label>Для активации введите <code>LIVE {{ snap.id }}</code><input name="confirmation" autocomplete="off" placeholder="LIVE {{ snap.id }}" required></label>
+      <button class="button danger" type="submit">Активировать защёлку</button>
+    </form>
+    {% endif %}
+  </div>
+  <p class="live-protection-note">Порядок включения: проверить MEXC → в течение 5 минут ввести показанную фразу → активировать защёлку. При ошибке приватного API защёлка снимается автоматически, а ожидающие планы требуют нового подтверждения.</p>
+</section>
+<section class="panel channels-panel">
+  <div class="panel-head"><div><p class="eyebrow">Command queue</p><h2>Последние команды</h2></div><span class="schema">ожидают: {{ control.pending_count }}</span></div>
+  <div class="table-wrap"><table><thead><tr><th>ID</th><th>Команда</th><th>Статус</th><th>Создана</th><th>Результат</th></tr></thead><tbody>
+  {% for command in control.commands %}<tr><td>#{{ command.id }}</td><td><strong>{{ command.kind }}</strong></td><td><span class="tag {{ 'good' if command.status == 'applied' else ('bad' if command.status in ('failed','rejected') else 'muted') }}">{{ command.status }}</span></td><td>{{ command.created_at|datetime }}</td><td>{{ command.error or '—' }}</td></tr>{% else %}<tr><td colspan="5" class="empty">Команд пока нет.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>

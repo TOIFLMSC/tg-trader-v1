@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Статистика · TG Trader{% endblock %}
+{% block content %}
+<section class="page-head"><div><p class="eyebrow">Recognition & paper analytics</p><h1>Статистика</h1><p class="lead">Качество распознавания, виртуальный PnL по каналам и расход LLM.</p></div></section>
+<div class="live-update-status" data-live-status-for="stats-live" role="status"><span class="live-dot"></span><span>Автообновление каждые 10 с</span></div>
+<div id="stats-live" data-live-region hx-get="{{ stats_partial_url }}" hx-trigger="every 10s" hx-swap="innerHTML">
+  {% include "partials/stats_live.html" %}
+</div>
+{% endblock %}
