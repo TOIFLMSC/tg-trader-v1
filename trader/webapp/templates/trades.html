@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Сделки · TG Trader{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div><p class="eyebrow">Trade planning</p><h1>Сделки</h1><p class="lead">Проверяйте параметры, публичную спецификацию MEXC и котировку, отвечайте на уточнения и принимайте решение по каждой версии плана.</p></div>
+  <span class="mode-pill"><span>Режим</span><strong>{{ trades.settings.get('execution_mode', 'recognition') }}</strong></span>
+</section>
+{% set execution = trades.settings.get('execution_mode', 'recognition') %}{% set live_armed = trades.settings.get('live_armed') == 'true' %}
+{% if execution == 'paper' %}<div class="notice success">Paper активен: новые подтверждённые планы создают только виртуальные ордера и позиции по публичным ценам MEXC. Приватный API биржи не вызывается.</div>{% elif execution == 'live' and live_armed %}<div class="notice success">Live активен, защёлка включена: подтверждённые Live-планы могут создавать реальные заявки MEXC.</div>{% elif execution == 'live' %}<div class="notice error">Live выбран, но защёлка снята: реальные заявки заблокированы. Активируйте защиту в разделе «Управление» и подтвердите план заново.</div>{% else %}<div class="notice success">Recognition активен: новые планы служат предпросмотром. Существующие ожидающие paper-заявки заморожены до повторного включения paper.</div>{% endif %}
+{% if reviewed %}<div class="notice success">Решение сохранено и привязано к версии плана.</div>{% endif %}
+{% if queued %}<div class="notice success">Команда поставлена в очередь. Reader повторно проверит версию и текущее состояние объекта.</div>{% endif %}
+{% if error %}<div class="notice error">{{ error }}</div>{% endif %}
+<div class="live-update-status" data-live-status-for="trades-live" role="status"><span class="live-dot"></span><span>Автообновление каждые 3 с</span></div>
+<div id="trades-live" data-live-region data-pause-on-edit="true" hx-get="{{ trades.partial_url }}" hx-trigger="every 3s" hx-swap="innerHTML">
+  {% include "partials/trades_live.html" %}
+</div>
+{% endblock %}

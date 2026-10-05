@@ -1,0 +1,19 @@
+<div class="event-list">
+{% for event in result.events %}
+  <article class="event-card">
+    <a class="event-main" href="/posts/{{ event.id }}">
+      {% if event.media %}<img class="event-thumb" src="/media/{{ event.id }}/0" alt="Изображение поста #{{ event.message }}" loading="lazy">{% else %}<div class="event-thumb placeholder">TXT</div>{% endif %}
+      <div class="event-copy">
+        <div class="event-meta"><span class="tag {{ 'good' if event.status == 'done' else ('bad' if event.status == 'failed' else 'muted') }}">{{ event.status }}</span><span>{{ event.channel_title }}</span><span>пост #{{ event.message }}</span><time>{{ event.display_date }}</time></div>
+        <h2>{{ event.summary or event.error or 'Ожидает распознавания' }}</h2>
+        <p>{{ event.text or 'Текст отсутствует — источник содержит изображение или вложение.' }}</p>
+        <div class="chip-row">{% for symbol in event.symbols %}<span class="chip symbol">{{ symbol }}</span>{% endfor %}{% for action in event.actions %}<span class="chip">{{ action }}</span>{% endfor %}</div>
+      </div>
+      <span class="arrow">→</span>
+    </a>
+  </article>
+{% else %}
+  <div class="panel empty-state"><strong>Посты не найдены</strong><p>Измените фильтры или дождитесь нового сообщения.</p></div>
+{% endfor %}
+</div>
+{% if result.total %}<nav class="pagination" aria-label="Пагинация"><a class="button ghost {{ 'disabled' if not prev_url else '' }}" {% if prev_url %}href="{{ prev_url }}"{% endif %}>← Назад</a><span>Страница {{ result.page }} из {{ result.pages }}</span><a class="button ghost {{ 'disabled' if not next_url else '' }}" {% if next_url %}href="{{ next_url }}"{% endif %}>Вперёд →</a></nav>{% endif %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Обзор · TG Trader{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">Состояние системы</p>
+    <h1>Панель управления</h1>
+    <p class="lead">Фактическое состояние reader, базы и подключённых каналов.</p>
+  </div>
+  <div class="mode-pill">
+    <span>Режим</span>
+    <strong>{{ data.settings.get('execution_mode', 'recognition') }}</strong>
+  </div>
+</section>
+<div class="live-update-status" data-live-status-for="dashboard-live" role="status"><span class="live-dot"></span><span>Автообновление каждые 3 с</span></div>
+<div id="dashboard-live" data-live-region hx-get="/partials/overview" hx-trigger="every 3s" hx-swap="innerHTML">
+  {% include "partials/dashboard_live.html" %}
+</div>
+{% endblock %}

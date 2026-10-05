@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>{% block title %}TG Trader Control{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+  <script defer src="{{ url_for('static', path='/htmx.min.js') }}"></script>
+  <script defer src="{{ url_for('static', path='/live-refresh.js') }}"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="TG Trader Control">
+      <span class="brand-mark">T</span>
+      <span><strong>TG Trader</strong><small>local control</small></span>
+    </a>
+    <div class="topbar-state">
+      <span class="pulse"></span>
+      <span>Локальная панель</span>
+    </div>
+  </header>
+  <div class="shell">
+    <aside class="sidebar">
+      <nav aria-label="Основная навигация">
+        <a class="nav-item {{ 'active' if active_page == 'dashboard' else '' }}" href="/"><span>Обзор</span><b>01</b></a>
+        <a class="nav-item {{ 'active' if active_page == 'channels' else '' }}" href="/channels"><span>Каналы</span><b>02</b></a>
+        <a class="nav-item {{ 'active' if active_page == 'posts' else '' }}" href="/posts"><span>Посты</span><b>03</b></a>
+        <a class="nav-item {{ 'active' if active_page == 'trades' else '' }}" href="/trades"><span>Сделки</span><b>04</b></a>
+        <a class="nav-item {{ 'active' if active_page == 'stats' else '' }}" href="/stats"><span>Статистика</span><b>05</b></a>
+        <a class="nav-item {{ 'active' if active_page == 'control' else '' }}" href="/control"><span>Управление</span><b>06</b></a>
+      </nav>
+      <div class="sidebar-note">
+        <span>Этап</span>
+        <strong>Guarded Live</strong>
+        <p>Реальные заявки разрешены только при активной защёлке и ручном подтверждении.</p>
+      </div>
+    </aside>
+    <main class="content">{% block content %}{% endblock %}</main>
+  </div>
+</body>
+</html>
